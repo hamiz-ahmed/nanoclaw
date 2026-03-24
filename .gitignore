@@ -25,6 +25,7 @@ CapSolver/assets/config.js
 
 # Personal documents
 cv/
+container/skills/job-apply/profile.json
 
 # Temp files
 .tmp-*
