@@ -391,6 +391,30 @@ async function startMessageLoop(): Promise<void> {
             continue;
           }
 
+          // Abort command: immediately kill the running container
+          const ABORT_PATTERN = /^(abort|stop|cancel)\b/i;
+          const hasAbort = groupMessages.some(
+            (m) => !m.is_from_me && ABORT_PATTERN.test(m.content.trim()),
+          );
+          if (hasAbort) {
+            const killed = queue.abort(chatJid);
+            // Delete job_state.json so a new application can start fresh
+            const groupFolder = group.folder;
+            if (groupFolder) {
+              const statePath = path.join(DATA_DIR, '..', 'groups', groupFolder, 'job_state.json');
+              try { fs.unlinkSync(statePath); } catch {}
+            }
+            sendMessageToChannel(
+              channels,
+              chatJid,
+              killed ? '🛑 Aborted. Previous task stopped.' : '✅ Nothing was running.',
+            );
+            lastAgentTimestamp[chatJid] =
+              groupMessages[groupMessages.length - 1].timestamp;
+            saveState();
+            continue;
+          }
+
           const isMainGroup = group.isMain === true;
           const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
 

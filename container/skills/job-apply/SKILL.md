@@ -375,9 +375,9 @@ For unknown required fields: ask the user, wait for reply, then fill.
 
 Re-snapshot every 3–4 fields. For multi-page forms: send "⏳ Moving to next page...", click Next, re-snapshot, send "⏳ Page <n> — continuing to fill...", continue filling.
 
-For CV upload:
+For CV upload (path comes from `$CV_PATH` env var):
 ```bash
-/home/node/.claude/skills/job-apply/ab upload @<ref> "/workspace/project/cv/Muhammad Hamiz Ahmed_Resume.pdf"
+/home/node/.claude/skills/job-apply/ab upload @<ref> "/workspace/project/$CV_PATH"
 ```
 Send: "📎 *Resume* → Uploaded"
 
@@ -400,15 +400,15 @@ Send a full summary and STOP:
 ✅ *All fields filled for <title> at <company>.*
 
 Here's what I entered:
-• First Name: Muhammad Hamiz
-• Last Name: Ahmed
-• Email: hamizahmed93@gmail.com
-• Phone: +49 1577 3690994
-• Location: Nuremberg, Germany
-• Current Role: Senior Data Scientist @ BestSecret GmbH
-• Years of Experience: 8
-• Salary: 95,000 EUR/year
-• Work Authorization: Yes – Germany/EU
+• First Name: <First Name you entered>
+• Last Name: <Last Name you entered>
+• Email: <Email you entered>
+• Phone: <Phone you entered>
+• Location: <Location of the user>
+• Current Role: <Current working role of the user>
+• Years of Experience: <Work experience based on CV>
+• Salary: <Expected salary for the role>
+• Work Authorization: <Whether user has work authorization or not>
 • Cover Letter: [as approved]
 • Resume: Uploaded
 

@@ -16,6 +16,7 @@ import {
   IDLE_TIMEOUT,
   TIMEZONE,
 } from './config.js';
+import { readEnvFile } from './env.js';
 import { resolveGroupFolderPath, resolveGroupIpcPath } from './group-folder.js';
 import { logger } from './logger.js';
 import {
@@ -28,6 +29,13 @@ import {
 import { detectAuthMode } from './credential-proxy.js';
 import { validateAdditionalMounts } from './mount-security.js';
 import { RegisteredGroup } from './types.js';
+
+const JOB_APPLY_ENV_KEYS = [
+  'CV_PATH',
+  'CAPSOLVER_API_KEY',
+  'JOB_APPLY_MODEL',
+  'KIMI_API_KEY',
+] as const;
 
 // Sentinel markers for robust output parsing (must match agent-runner)
 const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
@@ -199,9 +207,11 @@ function buildVolumeMounts(
     readonly: false,
   });
 
-  // CapSolver extension — loaded into agent-browser for automatic CAPTCHA solving
+  // CapSolver extension — loaded into agent-browser for automatic CAPTCHA solving.
+  // If CAPSOLVER_API_KEY is set in .env, inject it into assets/config.js automatically.
   const capsolverPath = path.join(process.cwd(), 'CapSolver');
   if (fs.existsSync(capsolverPath)) {
+    injectCapsolverApiKey(capsolverPath);
     mounts.push({
       hostPath: capsolverPath,
       containerPath: '/opt/capsolver-extension',
@@ -222,6 +232,43 @@ function buildVolumeMounts(
   return mounts;
 }
 
+/**
+ * If CAPSOLVER_API_KEY is set in .env, write it into CapSolver/assets/config.js.
+ * If the file already exists, replaces the apiKey value in-place.
+ * If it doesn't exist, creates a minimal config the extension can read.
+ * The file is gitignored so the key is never committed.
+ */
+function injectCapsolverApiKey(capsolverPath: string): void {
+  const jobEnv = readEnvFile(['CAPSOLVER_API_KEY']);
+  const apiKey = jobEnv.CAPSOLVER_API_KEY;
+  if (!apiKey) return;
+
+  const assetsDir = path.join(capsolverPath, 'assets');
+  const configPath = path.join(assetsDir, 'config.js');
+  fs.mkdirSync(assetsDir, { recursive: true });
+
+  if (fs.existsSync(configPath)) {
+    let content = fs.readFileSync(configPath, 'utf-8');
+    // Replace existing apiKey value (handles both quoted styles)
+    const replaced = content.replace(
+      /apiKey\s*[:=]\s*['"][^'"]*['"]/,
+      `apiKey: '${apiKey}'`,
+    );
+    if (replaced !== content) {
+      fs.writeFileSync(configPath, replaced);
+      logger.debug('Injected CAPSOLVER_API_KEY into existing config.js');
+      return;
+    }
+  }
+
+  // No existing file or regex didn't match — write minimal config
+  fs.writeFileSync(
+    configPath,
+    `var defaultConfig = {\n  apiKey: '${apiKey}',\n  useCapsolver: true,\n  manualSolving: false\n};\n`,
+  );
+  logger.debug('Created CapSolver config.js with CAPSOLVER_API_KEY from .env');
+}
+
 function buildContainerArgs(
   mounts: VolumeMount[],
   containerName: string,
@@ -236,6 +283,12 @@ function buildContainerArgs(
   args.push('-e', 'DISPLAY=:99');
   args.push('-e', 'AGENT_BROWSER_HEADED=true');
   args.push('-e', 'AGENT_BROWSER_ARGS=--no-sandbox,--disable-gpu');
+
+  // Job-apply skill env vars — read from .env, passed into container
+  const jobEnv = readEnvFile([...JOB_APPLY_ENV_KEYS]);
+  if (jobEnv.CV_PATH) args.push('-e', `CV_PATH=${jobEnv.CV_PATH}`);
+  if (jobEnv.JOB_APPLY_MODEL) args.push('-e', `JOB_APPLY_MODEL=${jobEnv.JOB_APPLY_MODEL}`);
+  if (jobEnv.KIMI_API_KEY) args.push('-e', `KIMI_API_KEY=${jobEnv.KIMI_API_KEY}`);
 
   // Route API traffic through the credential proxy (containers never see real secrets)
   args.push(

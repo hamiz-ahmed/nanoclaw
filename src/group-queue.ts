@@ -1,9 +1,10 @@
-import { ChildProcess } from 'child_process';
+import { ChildProcess, exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
 import { DATA_DIR, MAX_CONCURRENT_CONTAINERS } from './config.js';
 import { logger } from './logger.js';
+import { stopContainer } from './container-runtime.js';
 
 interface QueuedTask {
   id: string;
@@ -175,6 +176,34 @@ export class GroupQueue {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Immediately kill the running container and clear all pending work.
+   * Returns true if a container was running, false if nothing was active.
+   */
+  abort(groupJid: string): boolean {
+    const state = this.getGroup(groupJid);
+    if (!state.active) return false;
+
+    // Kill the Docker container
+    if (state.containerName) {
+      exec(stopContainer(state.containerName), { timeout: 5000 }, (err) => {
+        if (err) logger.warn({ groupJid, err }, 'Error stopping container on abort');
+      });
+    }
+
+    // Kill the child process directly
+    if (state.process) {
+      try { state.process.kill('SIGKILL'); } catch {}
+    }
+
+    // Clear pending work so nothing runs after
+    state.pendingMessages = false;
+    state.pendingTasks = [];
+
+    logger.info({ groupJid, containerName: state.containerName }, 'Container aborted by user');
+    return true;
   }
 
   /**
