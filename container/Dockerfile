@@ -22,9 +22,13 @@ RUN apt-get update && apt-get install -y \
     libcups2 \
     libdrm2 \
     libxshmfence1 \
+    xvfb \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
+
+# Allow non-root user to start Xvfb
+RUN chmod u+s /usr/bin/Xvfb
 
 # Set Chromium path for agent-browser
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
@@ -55,7 +59,7 @@ RUN mkdir -p /workspace/group /workspace/global /workspace/extra /workspace/ipc/
 # Container input (prompt, group info) is passed via stdin JSON.
 # Credentials are injected by the host's credential proxy — never passed here.
 # Follow-up messages arrive via IPC files in /workspace/ipc/input/
-RUN printf '#!/bin/bash\nset -e\ncd /app && npx tsc --outDir /tmp/dist 2>&1 >&2\nln -s /app/node_modules /tmp/dist/node_modules\nchmod -R a-w /tmp/dist\ncat > /tmp/input.json\nnode /tmp/dist/index.js < /tmp/input.json\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/bash\nset -e\n# Start virtual display for headed browser (required for CapSolver extension)\nif [ -n "$DISPLAY" ]; then\n  Xvfb $DISPLAY -screen 0 1280x900x24 &\n  sleep 0.5\nfi\ncd /app && npx tsc --outDir /tmp/dist 2>&1 >&2\nln -s /app/node_modules /tmp/dist/node_modules\nchmod -R a-w /tmp/dist\ncat > /tmp/input.json\nnode /tmp/dist/index.js < /tmp/input.json\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Set ownership to node user (non-root) for writable directories
 RUN chown -R node:node /workspace && chmod 777 /home/node

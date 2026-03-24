@@ -21,6 +21,10 @@ groups/global/*
 # Secrets
 *.keys.json
 .env
+CapSolver/assets/config.js
+
+# Personal documents
+cv/
 
 # Temp files
 .tmp-*

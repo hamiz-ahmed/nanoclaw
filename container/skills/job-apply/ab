@@ -1,0 +1,4 @@
+#!/bin/bash
+# agent-browser wrapper for job-apply skill
+# CapSolver extension loaded via AGENT_BROWSER_EXTENSIONS env var — CAPTCHAs solved automatically
+exec agent-browser "$@"

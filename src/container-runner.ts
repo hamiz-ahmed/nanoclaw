@@ -199,6 +199,16 @@ function buildVolumeMounts(
     readonly: false,
   });
 
+  // CapSolver extension — loaded into agent-browser for automatic CAPTCHA solving
+  const capsolverPath = path.join(process.cwd(), 'CapSolver');
+  if (fs.existsSync(capsolverPath)) {
+    mounts.push({
+      hostPath: capsolverPath,
+      containerPath: '/opt/capsolver-extension',
+      readonly: true,
+    });
+  }
+
   // Additional mounts validated against external allowlist (tamper-proof from containers)
   if (group.containerConfig?.additionalMounts) {
     const validatedMounts = validateAdditionalMounts(
@@ -220,6 +230,12 @@ function buildContainerArgs(
 
   // Pass host timezone so container's local time matches the user's
   args.push('-e', `TZ=${TIMEZONE}`);
+
+  // CapSolver: load extension and run browser with virtual display (avoids headless detection)
+  args.push('-e', 'AGENT_BROWSER_EXTENSIONS=/opt/capsolver-extension');
+  args.push('-e', 'DISPLAY=:99');
+  args.push('-e', 'AGENT_BROWSER_HEADED=true');
+  args.push('-e', 'AGENT_BROWSER_ARGS=--no-sandbox,--disable-gpu');
 
   // Route API traffic through the credential proxy (containers never see real secrets)
   args.push(

@@ -45,6 +45,7 @@ server.tool(
   {
     text: z.string().describe('The message text to send'),
     sender: z.string().optional().describe('Your role/identity name (e.g. "Researcher"). When set, messages appear from a dedicated bot in Telegram.'),
+    image_path: z.string().optional().describe('Absolute path to an image file to send as a photo (e.g. /workspace/group/screenshot.png). When set, the image is sent as a photo with text as the caption.'),
   },
   async (args) => {
     const data: Record<string, string | undefined> = {
@@ -52,6 +53,7 @@ server.tool(
       chatJid,
       text: args.text,
       sender: args.sender || undefined,
+      image_path: args.image_path || undefined,
       groupFolder,
       timestamp: new Date().toISOString(),
     };
