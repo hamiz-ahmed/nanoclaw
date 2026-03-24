@@ -287,8 +287,10 @@ function buildContainerArgs(
   // Job-apply skill env vars — read from .env, passed into container
   const jobEnv = readEnvFile([...JOB_APPLY_ENV_KEYS]);
   if (jobEnv.CV_PATH) args.push('-e', `CV_PATH=${jobEnv.CV_PATH}`);
-  if (jobEnv.JOB_APPLY_MODEL) args.push('-e', `JOB_APPLY_MODEL=${jobEnv.JOB_APPLY_MODEL}`);
-  if (jobEnv.KIMI_API_KEY) args.push('-e', `KIMI_API_KEY=${jobEnv.KIMI_API_KEY}`);
+  if (jobEnv.JOB_APPLY_MODEL)
+    args.push('-e', `JOB_APPLY_MODEL=${jobEnv.JOB_APPLY_MODEL}`);
+  if (jobEnv.KIMI_API_KEY)
+    args.push('-e', `KIMI_API_KEY=${jobEnv.KIMI_API_KEY}`);
 
   // Route API traffic through the credential proxy (containers never see real secrets)
   args.push(

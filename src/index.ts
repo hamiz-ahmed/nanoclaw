@@ -401,13 +401,23 @@ async function startMessageLoop(): Promise<void> {
             // Delete job_state.json so a new application can start fresh
             const groupFolder = group.folder;
             if (groupFolder) {
-              const statePath = path.join(DATA_DIR, '..', 'groups', groupFolder, 'job_state.json');
-              try { fs.unlinkSync(statePath); } catch {}
+              const statePath = path.join(
+                DATA_DIR,
+                '..',
+                'groups',
+                groupFolder,
+                'job_state.json',
+              );
+              try {
+                fs.unlinkSync(statePath);
+              } catch {}
             }
             sendMessageToChannel(
               channels,
               chatJid,
-              killed ? '🛑 Aborted. Previous task stopped.' : '✅ Nothing was running.',
+              killed
+                ? '🛑 Aborted. Previous task stopped.'
+                : '✅ Nothing was running.',
             );
             lastAgentTimestamp[chatJid] =
               groupMessages[groupMessages.length - 1].timestamp;
