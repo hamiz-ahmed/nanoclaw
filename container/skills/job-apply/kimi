@@ -1,21 +1,13 @@
 #!/usr/bin/env node
-'use strict';
+import https from 'https';
+import fs from 'fs';
 
 /**
- * kimi — call Kimi (Moonshot AI) API with a prompt from stdin.
- *
- * Usage:
- *   echo "prompt text" | kimi
- *   kimi < prompt.txt
- *
- * Reads KIMI_API_KEY from env or /workspace/project/.env
- * Outputs the model's response text to stdout.
+ * kimi — call Kimi K2.5 API with a prompt from stdin.
+ * Usage: echo "prompt" | kimi   OR   kimi < prompt.txt
  */
 
-const https = require('https');
-const fs = require('fs');
-
-// Read API key from env or .env file
+// Read API key from env or /workspace/project/.env
 let apiKey = process.env.KIMI_API_KEY || '';
 if (!apiKey) {
   try {
@@ -25,7 +17,7 @@ if (!apiKey) {
   } catch {}
 }
 if (!apiKey) {
-  process.stderr.write('Error: KIMI_API_KEY not found in env or /workspace/project/.env\n');
+  process.stderr.write('Error: KIMI_API_KEY not found\n');
   process.exit(1);
 }
 
@@ -37,11 +29,11 @@ process.stdin.on('end', () => {
   const payload = JSON.stringify({
     model: 'kimi-k2.5',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
+    temperature: 1,
   });
 
-  const options = {
-    hostname: 'api.moonshot.cn',
+  const req = https.request({
+    hostname: 'api.moonshot.ai',
     path: '/v1/chat/completions',
     method: 'POST',
     headers: {
@@ -49,9 +41,7 @@ process.stdin.on('end', () => {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Length': Buffer.byteLength(payload),
     },
-  };
-
-  const req = https.request(options, (res) => {
+  }, (res) => {
     let body = '';
     res.on('data', chunk => { body += chunk; });
     res.on('end', () => {
@@ -78,7 +68,6 @@ process.stdin.on('end', () => {
     process.stderr.write(`Request failed: ${e.message}\n`);
     process.exit(1);
   });
-
   req.write(payload);
   req.end();
 });
